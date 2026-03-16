@@ -1,47 +1,79 @@
-<nav class="navbar">
-    <div class="logo">SOMATIK.</div>
-    <a href="#waitlist" class="nav-btn">Join Waitlist</a>
-</nav>
+<!DOCTYPE html>
+<html lang="en">
 
-<section class="hero-section">
-    <canvas id="webgl-canvas"></canvas>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Somatik Systems | Next-Gen FGF 3D Printing</title>
+    <link rel="stylesheet" href="style.css">
 
-    <div class="hero-content">
-        <h1 class="hero-title">
-            <span class="text-reveal">Shape</span>
-            <span class="text-reveal">The Soft</span>
-            <span class="text-reveal">Future.</span>
-        </h1>
-        <p class="hero-subtitle">The industrial FGF pellet printer tuned for medical-grade TPU and SEBS. Fully automated
-            fabrication. Perfect extrusion.</p>
-    </div>
-</section>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
 
-<section class="specs-section">
-    <div class="specs-content">
-        <h2>Engineered for Automation.</h2>
-        <p>Designed from the ground up to integrate directly into the manufacturing pipeline for soft robotic actuators
-            and complex elastomeric components.</p>
+<body>
 
-        <div class="feature-grid">
-            <div class="feature-card">
-                <h3>Zero Clogs</h3>
-                <p>Optimized thermal zones ensure continuous flow for high-shore flexibility materials.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Academic Precision</h3>
-                <p>Sub-millimeter volumetric control capable of holding the tightest tolerances required by advanced
-                    robotics labs.</p>
+    <nav class="navbar">
+        <div class="logo">SOMATIK.</div>
+        <a href="#waitlist" class="nav-btn">Join Waitlist</a>
+    </nav>
+
+    <section class="hero-section">
+        <canvas id="webgl-canvas"></canvas>
+
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <span class="text-reveal">Shape</span>
+                <span class="text-reveal">The Soft</span>
+                <span class="text-reveal">Future.</span>
+            </h1>
+            <p class="hero-subtitle">The industrial FGF pellet printer tuned for medical-grade TPU and SEBS. Fully automated fabrication. Perfect extrusion.</p>
+        </div>
+    </section>
+
+    <section class="specs-section">
+        <div class="specs-content">
+            <h2>Engineered for Automation.</h2>
+            <p>Designed from the ground up to integrate directly into the manufacturing pipeline for soft robotic actuators and complex elastomeric components.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>Zero Clogs</h3>
+                    <p>Optimized thermal zones ensure continuous flow for high-shore flexibility materials.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Academic Precision</h3>
+                    <p>Sub-millimeter volumetric control capable of holding the tightest tolerances required by advanced robotics labs.</p>
+                </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<section id="waitlist" class="waitlist-section">
-    <h2>Phase 1 Rollout</h2>
-    <p>Production scaling begins in Medford, MA. Reserve your pipeline allocation today.</p>
-    <form class="waitlist-form" onsubmit="event.preventDefault(); alert('Waitlist API ready to connect!');">
-        <input type="email" placeholder="Enter your academic or corporate email" required>
-        <button type="submit" class="submit-btn">Reserve Allocation</button>
-    </form>
-</section>
+    <section id="waitlist" class="waitlist-section">
+        <h2>Phase 1 Rollout</h2>
+        <p>Production scaling begins in Medford, MA. Reserve your pipeline allocation today.</p>
+        <form class="waitlist-form" onsubmit="event.preventDefault(); alert('Waitlist API ready to connect!');">
+            <input type="email" placeholder="Enter your academic or corporate email" required>
+            <button type="submit" class="submit-btn">Reserve Allocation</button>
+        </form>
+    </section>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.32/dist/lenis.min.js"></script>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script type="module" src="./app.js"></script>
+</body>
+
+</html>

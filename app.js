@@ -39,15 +39,19 @@ scene.add(fillLight);
 // ==========================================
 let printerModel;
 let doorAssembly = null;
-let extruderTarget = new THREE.Vector3(0, 0, 0); // Fallback target
+let extruderTarget = new THREE.Vector3(0, 0, 0);
 
 const gltfLoader = new GLTFLoader();
 
+// Fixed relative path for gh-pages
 gltfLoader.load(
-    'assets/printer.glb',
+    './assets/printer.glb',
     (gltf) => {
         printerModel = gltf.scene;
         printerModel.position.set(0, -1, 0);
+
+        // Scale down the CAD model (assumes mm to meters conversion)
+        printerModel.scale.set(0.01, 0.01, 0.01);
 
         // Traverse to find specific meshes
         printerModel.traverse((child) => {
@@ -55,15 +59,13 @@ gltfLoader.load(
                 doorAssembly = child;
             }
             if (child.isMesh && child.name === 'Extruder_Head') {
-                // Get the exact world coordinates of the extruder to look at
                 child.getWorldPosition(extruderTarget);
             }
         });
 
         scene.add(printerModel);
-        
-        // Ensure GSAP is loaded before firing
-        if(typeof gsap !== 'undefined') {
+
+        if (typeof gsap !== 'undefined') {
             setupScrollChoreography();
         }
     }
@@ -75,38 +77,34 @@ gltfLoader.load(
 function setupScrollChoreography() {
     gsap.registerPlugin(ScrollTrigger);
 
-    // We create a proxy object to tween the camera's lookAt vector smoothly
     const lookAtProxy = { x: 0, y: 0, z: 0 };
 
     const tl = gsap.timeline({
         scrollTrigger: {
             trigger: ".specs-section",
-            start: "top bottom", // Starts when top of specs section hits bottom of screen
-            end: "top top",      // Ends when specs section locks to top of screen
-            scrub: 1,            // 1 second smoothing on the scroll tie
+            start: "top bottom",
+            end: "top top",
+            scrub: 1,
         }
     });
 
-    // Action A: Open the Door (120 degrees converted to radians)
     if (doorAssembly) {
         tl.to(doorAssembly.rotation, {
             y: doorAssembly.rotation.y + (120 * Math.PI) / 180,
             ease: "power1.inOut"
-        }, 0); // '0' ensures it starts at the exact beginning of the timeline
+        }, 0);
     }
 
-    // Action B: Move Camera Position
     tl.to(camera.position, {
         x: 0,
         y: 0.5,
-        z: 2.5, // Pushes tight into the enclosure
+        z: 2.5,
         ease: "power1.inOut",
         onUpdate: () => {
             camera.lookAt(lookAtProxy.x, lookAtProxy.y, lookAtProxy.z);
         }
     }, 0);
 
-    // Simultaneously tween the LookAt Proxy towards the Extruder Head
     tl.to(lookAtProxy, {
         x: extruderTarget.x,
         y: extruderTarget.y,
@@ -131,11 +129,9 @@ const lenis = new Lenis({
 
 function tick(time) {
     lenis.raf(time);
-    
-    // Explicitly update camera lookAt in the render loop if not animating
-    // so it starts centered before the scroll begins
+
     if (!gsap.isTweening(camera.position)) {
-         camera.lookAt(0, 0, 0); 
+        camera.lookAt(0, 0, 0);
     }
 
     renderer.render(scene, camera);

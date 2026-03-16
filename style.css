@@ -1,10 +1,121 @@
+/* Base Reset & Flat Design Architecture */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0a0a0a;
+    color: #ffffff;
+    overflow-x: hidden;
+}
+
+/* Lenis Recommended CSS for Smooth Scrolling */
+html.lenis {
+    height: auto;
+}
+
+.lenis.lenis-smooth {
+    scroll-behavior: auto;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+    overflow: hidden;
+}
+
+/* Navbar */
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    padding: 2rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    mix-blend-mode: difference;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+}
+
+.nav-btn {
+    color: #fff;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+    background: #fff;
+    color: #000;
+}
+
+/* Hero Section */
+.hero-section {
+    position: relative;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    padding-left: 4rem;
+}
+
+/* 3D Canvas Background */
+/* FIXED: Locks the canvas to the viewport */
+#webgl-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    outline: none;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 10;
+    max-width: 600px;
+    pointer-events: none;
+}
+
+.hero-title {
+    font-size: 6rem;
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 2rem;
+}
+
+.hero-subtitle {
+    font-size: 1.25rem;
+    color: #a3a3a3;
+    line-height: 1.5;
+    max-width: 80%;
+}
+
 /* Specs Section Upgrade */
 .specs-section {
-    height: 150vh; /* Extra height ensures plenty of scroll room for the GSAP timeline */
+    height: 150vh;
     display: flex;
     align-items: flex-start;
     padding: 10rem 4rem;
-    background: transparent; /* Let the body background show through */
+    background: transparent;
     position: relative;
     z-index: 10;
     pointer-events: none;
@@ -12,7 +123,7 @@
 
 .specs-content {
     max-width: 500px;
-    margin-left: auto; /* Pushes text to the right, letting the zoomed 3D model breathe on the left */
+    margin-left: auto;
 }
 
 .specs-content h2 {
