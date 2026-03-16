@@ -19,7 +19,7 @@ renderer.toneMappingExposure = 1.0;
 // ==========================================
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
 // Position the camera slightly to the right and looking down
-camera.position.set(3, 2, 5); 
+camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
@@ -46,14 +46,14 @@ gltfLoader.load(
     'assets/printer.glb',
     (gltf) => {
         printerModel = gltf.scene;
-        
+
         // Center the model and scale it (adjust scale if it imports too big/small)
-        printerModel.position.set(0, -1, 0); 
+        printerModel.position.set(0, -1, 0);
         printerModel.scale.set(1, 1, 1);
-        
+
         // Optional: Very slow idle rotation to make it feel alive
-        printerModel.rotation.y = -Math.PI / 4; 
-        
+        printerModel.rotation.y = -Math.PI / 4;
+
         scene.add(printerModel);
         console.log("Printer loaded successfully!");
     },
@@ -83,10 +83,10 @@ const lenis = new Lenis({
 function tick(time) {
     // Update smooth scroll
     lenis.raf(time);
-    
+
     // Slowly rotate the model if it's loaded (just for Phase 1 idle state)
-    if(printerModel) {
-        printerModel.rotation.y += 0.001; 
+    if (printerModel) {
+        printerModel.rotation.y += 0.001;
     }
 
     // Render the 3D scene
