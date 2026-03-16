@@ -7,66 +7,116 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const canvas = document.querySelector('#webgl-canvas');
 const scene = new THREE.Scene();
 
-// We use alpha: true so the background is transparent and shows your CSS color
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping; // Premium lighting calculation
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 
 // ==========================================
 // 2. Camera Setup
 // ==========================================
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-// Position the camera slightly to the right and looking down
 camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
-// 3. Lighting Architecture (The "Apple" Vibe)
+// 3. Lighting Architecture
 // ==========================================
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Soft base light
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 2); // Strong key light
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
 directionalLight.position.set(5, 5, 5);
 scene.add(directionalLight);
 
-const fillLight = new THREE.DirectionalLight(0xe0eaff, 1); // Cool blue fill light
+const fillLight = new THREE.DirectionalLight(0xe0eaff, 1);
 fillLight.position.set(-5, 3, -5);
 scene.add(fillLight);
 
 // ==========================================
-// 4. Load the GLB Asset
+// 4. Load the GLB & Setup Animation
 // ==========================================
 let printerModel;
+let doorAssembly = null;
+let extruderTarget = new THREE.Vector3(0, 0, 0); // Fallback target
+
 const gltfLoader = new GLTFLoader();
 
 gltfLoader.load(
     'assets/printer.glb',
     (gltf) => {
         printerModel = gltf.scene;
-
-        // Center the model and scale it (adjust scale if it imports too big/small)
         printerModel.position.set(0, -1, 0);
-        printerModel.scale.set(1, 1, 1);
 
-        // Optional: Very slow idle rotation to make it feel alive
-        printerModel.rotation.y = -Math.PI / 4;
+        // Traverse to find specific meshes
+        printerModel.traverse((child) => {
+            if (child.isMesh && child.name === 'Door_Assembly') {
+                doorAssembly = child;
+            }
+            if (child.isMesh && child.name === 'Extruder_Head') {
+                // Get the exact world coordinates of the extruder to look at
+                child.getWorldPosition(extruderTarget);
+            }
+        });
 
         scene.add(printerModel);
-        console.log("Printer loaded successfully!");
-    },
-    (progress) => {
-        console.log(`Loading: ${(progress.loaded / progress.total * 100)}%`);
-    },
-    (error) => {
-        console.error("Error loading the GLB file:", error);
+        
+        // Ensure GSAP is loaded before firing
+        if(typeof gsap !== 'undefined') {
+            setupScrollChoreography();
+        }
     }
 );
 
 // ==========================================
-// 5. Responsive Resize & Animation Loop
+// 5. GSAP Scroll Choreography
+// ==========================================
+function setupScrollChoreography() {
+    gsap.registerPlugin(ScrollTrigger);
+
+    // We create a proxy object to tween the camera's lookAt vector smoothly
+    const lookAtProxy = { x: 0, y: 0, z: 0 };
+
+    const tl = gsap.timeline({
+        scrollTrigger: {
+            trigger: ".specs-section",
+            start: "top bottom", // Starts when top of specs section hits bottom of screen
+            end: "top top",      // Ends when specs section locks to top of screen
+            scrub: 1,            // 1 second smoothing on the scroll tie
+        }
+    });
+
+    // Action A: Open the Door (120 degrees converted to radians)
+    if (doorAssembly) {
+        tl.to(doorAssembly.rotation, {
+            y: doorAssembly.rotation.y + (120 * Math.PI) / 180,
+            ease: "power1.inOut"
+        }, 0); // '0' ensures it starts at the exact beginning of the timeline
+    }
+
+    // Action B: Move Camera Position
+    tl.to(camera.position, {
+        x: 0,
+        y: 0.5,
+        z: 2.5, // Pushes tight into the enclosure
+        ease: "power1.inOut",
+        onUpdate: () => {
+            camera.lookAt(lookAtProxy.x, lookAtProxy.y, lookAtProxy.z);
+        }
+    }, 0);
+
+    // Simultaneously tween the LookAt Proxy towards the Extruder Head
+    tl.to(lookAtProxy, {
+        x: extruderTarget.x,
+        y: extruderTarget.y,
+        z: extruderTarget.z,
+        ease: "power1.inOut"
+    }, 0);
+}
+
+// ==========================================
+// 6. Responsive Resize & Render Loop
 // ==========================================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -74,25 +124,22 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Initialize Lenis Smooth Scrolling (since we imported the CDN in HTML)
 const lenis = new Lenis({
     duration: 1.2,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
 });
 
 function tick(time) {
-    // Update smooth scroll
     lenis.raf(time);
-
-    // Slowly rotate the model if it's loaded (just for Phase 1 idle state)
-    if (printerModel) {
-        printerModel.rotation.y += 0.001;
+    
+    // Explicitly update camera lookAt in the render loop if not animating
+    // so it starts centered before the scroll begins
+    if (!gsap.isTweening(camera.position)) {
+         camera.lookAt(0, 0, 0); 
     }
 
-    // Render the 3D scene
     renderer.render(scene, camera);
     window.requestAnimationFrame(tick);
 }
 
-// Start the loop
 window.requestAnimationFrame(tick);

@@ -1,120 +1,102 @@
-/* Base Reset & Flat Design Architecture */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #0a0a0a;
-    /* Premium matte black */
-    color: #ffffff;
-    overflow-x: hidden;
-}
-
-/* Lenis Recommended CSS for Smooth Scrolling */
-html.lenis {
-    height: auto;
-}
-
-.lenis.lenis-smooth {
-    scroll-behavior: auto;
-}
-
-.lenis.lenis-smooth [data-lenis-prevent] {
-    overscroll-behavior: contain;
-}
-
-.lenis.lenis-stopped {
-    overflow: hidden;
-}
-
-/* Navbar */
-.navbar {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    padding: 2rem 4rem;
+/* Specs Section Upgrade */
+.specs-section {
+    height: 150vh; /* Extra height ensures plenty of scroll room for the GSAP timeline */
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 100;
-    mix-blend-mode: difference;
-    /* Keeps text visible over light parts of the 3D model */
-}
-
-.logo {
-    font-size: 1.5rem;
-    font-weight: 900;
-    letter-spacing: -0.05em;
-}
-
-.nav-btn {
-    color: #fff;
-    text-decoration: none;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
-    font-size: 0.875rem;
-    transition: all 0.3s ease;
-}
-
-.nav-btn:hover {
-    background: #fff;
-    color: #000;
-}
-
-/* Hero Section */
-.hero-section {
-    position: relative;
-    height: 100vh;
-    width: 100vw;
-    display: flex;
-    align-items: center;
-    padding-left: 4rem;
-}
-
-/* 3D Canvas Background */
-#webgl-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    outline: none;
-}
-
-.hero-content {
+    align-items: flex-start;
+    padding: 10rem 4rem;
+    background: transparent; /* Let the body background show through */
     position: relative;
     z-index: 10;
-    max-width: 600px;
     pointer-events: none;
-    /* Lets mouse clicks pass through to orbit the 3D model */
 }
 
-.hero-title {
-    font-size: 6rem;
+.specs-content {
+    max-width: 500px;
+    margin-left: auto; /* Pushes text to the right, letting the zoomed 3D model breathe on the left */
+}
+
+.specs-content h2 {
+    font-size: 3.5rem;
     font-weight: 900;
-    line-height: 0.9;
-    letter-spacing: -0.05em;
+    margin-bottom: 1rem;
+    letter-spacing: -0.03em;
+}
+
+.specs-content p {
+    color: #a3a3a3;
+    font-size: 1.125rem;
+    line-height: 1.6;
+    margin-bottom: 3rem;
+}
+
+.feature-grid {
     display: flex;
     flex-direction: column;
-    margin-bottom: 2rem;
+    gap: 2rem;
 }
 
-.hero-subtitle {
-    font-size: 1.25rem;
-    color: #a3a3a3;
-    line-height: 1.5;
-    max-width: 80%;
+.feature-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
 }
 
-.specs-section {
-    height: 100vh;
+.feature-card p {
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+/* Waitlist Section */
+.waitlist-section {
+    height: 60vh;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     background: #111;
+    text-align: center;
+    z-index: 20;
+    position: relative;
+}
+
+.waitlist-section h2 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.waitlist-section p {
+    color: #a3a3a3;
+    margin-bottom: 2rem;
+}
+
+.waitlist-form {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    max-width: 500px;
+}
+
+.waitlist-form input {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    border-radius: 50px;
+    border: 1px solid #333;
+    background: #000;
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+}
+
+.submit-btn {
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    border: none;
+    background: #fff;
+    color: #000;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.submit-btn:hover {
+    transform: scale(1.05);
 }
