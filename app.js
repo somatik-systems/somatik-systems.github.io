@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ==========================================
 // 1. Core Three.js Setup
@@ -21,7 +22,18 @@ camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
-// 3. Lighting Architecture
+// 3. Orbit Controls (Interactive Spining & Zooming)
+// ==========================================
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; // Adds a premium smooth friction effect
+controls.dampingFactor = 0.05;
+controls.enableZoom = true; 
+controls.enablePan = true;
+controls.autoRotate = true; // Slowly spins the model when the user isn't interacting
+controls.autoRotateSpeed = 1.0;
+
+// ==========================================
+// 4. Lighting Architecture
 // ==========================================
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(ambientLight);
@@ -35,12 +47,9 @@ fillLight.position.set(-5, 3, -5);
 scene.add(fillLight);
 
 // ==========================================
-// 4. Load the GLB & Setup Animation
+// 5. Load the GLB
 // ==========================================
 let printerModel;
-let doorAssembly = null;
-let extruderTarget = new THREE.Vector3(0, 0, 0);
-
 const gltfLoader = new GLTFLoader();
 
 // Fixed relative path for gh-pages
@@ -49,69 +58,13 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
         printerModel.position.set(0, -1, 0);
-
+        
         // Scale down the CAD model (assumes mm to meters conversion)
-        printerModel.scale.set(0.01, 0.01, 0.01);
-
-        // Traverse to find specific meshes
-        printerModel.traverse((child) => {
-            if (child.isMesh && child.name === 'Door_Assembly') {
-                doorAssembly = child;
-            }
-            if (child.isMesh && child.name === 'Extruder_Head') {
-                child.getWorldPosition(extruderTarget);
-            }
-        });
+        printerModel.scale.set(0.01, 0.01, 0.01); 
 
         scene.add(printerModel);
-
-        if (typeof gsap !== 'undefined') {
-            setupScrollChoreography();
-        }
     }
 );
-
-// ==========================================
-// 5. GSAP Scroll Choreography
-// ==========================================
-function setupScrollChoreography() {
-    gsap.registerPlugin(ScrollTrigger);
-
-    const lookAtProxy = { x: 0, y: 0, z: 0 };
-
-    const tl = gsap.timeline({
-        scrollTrigger: {
-            trigger: ".specs-section",
-            start: "top bottom",
-            end: "top top",
-            scrub: 1,
-        }
-    });
-
-    if (doorAssembly) {
-        tl.to(doorAssembly.rotation, {
-            y: doorAssembly.rotation.y + (120 * Math.PI) / 180,
-            ease: "power1.inOut"
-        }, 0);
-    }
-
-    tl.to(camera.position, {
-        x: 0,
-        y: 0.5,
-        z: 2.5,
-        ease: "power1.inOut",
-        onUpdate: () => {
-            camera.lookAt(lookAtProxy.x, lookAtProxy.y, lookAtProxy.z);
-        }
-    }, 0);
-
-    tl.to(lookAtProxy, {
-        x: extruderTarget.x,
-        y: extruderTarget.y,
-        z: extruderTarget.z,
-        ease: "power1.inOut"
-    }, 0);
-}
 
 // ==========================================
 // 6. Responsive Resize & Render Loop
@@ -129,10 +82,9 @@ const lenis = new Lenis({
 
 function tick(time) {
     lenis.raf(time);
-
-    if (!gsap.isTweening(camera.position)) {
-        camera.lookAt(0, 0, 0);
-    }
+    
+    // Update the OrbitControls to calculate damping and auto-rotation
+    controls.update();
 
     renderer.render(scene, camera);
     window.requestAnimationFrame(tick);
