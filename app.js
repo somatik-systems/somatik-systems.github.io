@@ -25,11 +25,11 @@ scene.add(camera);
 // 3. Orbit Controls (Interactive Spining & Zooming)
 // ==========================================
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; // Adds a premium smooth friction effect
+controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-controls.enableZoom = true; 
+controls.enableZoom = true;
 controls.enablePan = true;
-controls.autoRotate = true; // Slowly spins the model when the user isn't interacting
+controls.autoRotate = true;
 controls.autoRotateSpeed = 1.0;
 
 // ==========================================
@@ -47,22 +47,48 @@ fillLight.position.set(-5, 3, -5);
 scene.add(fillLight);
 
 // ==========================================
-// 5. Load the GLB
+// 5. Load the GLB & Setup Progress Tracker
 // ==========================================
 let printerModel;
 const gltfLoader = new GLTFLoader();
 
-// Fixed relative path for gh-pages
+// UI elements for loader
+const loaderWrapper = document.getElementById('loader-wrapper');
+const loadingText = document.getElementById('loading-text');
+
 gltfLoader.load(
     './assets/printer.glb',
+    // onSuccess callback
     (gltf) => {
         printerModel = gltf.scene;
         printerModel.position.set(0, -1, 0);
-        
-        // Scale down the CAD model (assumes mm to meters conversion)
-        printerModel.scale.set(0.01, 0.01, 0.01); 
+
+        // Scale down the CAD model
+        printerModel.scale.set(0.01, 0.01, 0.01);
 
         scene.add(printerModel);
+
+        // Fade out loader
+        loaderWrapper.style.opacity = '0';
+        setTimeout(() => {
+            loaderWrapper.style.display = 'none';
+        }, 500); // Wait for CSS transition to finish before removing from flow
+    },
+    // onProgress callback
+    (xhr) => {
+        if (xhr.lengthComputable) {
+            const percentComplete = (xhr.loaded / xhr.total) * 100;
+            loadingText.innerText = `Loading Digital Twin: ${Math.round(percentComplete)}%`;
+        } else {
+            // Fallback if GitHub Pages strips the Content-Length header
+            const mbsLoaded = (xhr.loaded / (1024 * 1024)).toFixed(1);
+            loadingText.innerText = `Loading Digital Twin: ${mbsLoaded} MB`;
+        }
+    },
+    // onError callback
+    (error) => {
+        console.error("Error loading GLB:", error);
+        loadingText.innerText = "Error loading model. Please refresh.";
     }
 );
 
@@ -82,10 +108,7 @@ const lenis = new Lenis({
 
 function tick(time) {
     lenis.raf(time);
-    
-    // Update the OrbitControls to calculate damping and auto-rotation
     controls.update();
-
     renderer.render(scene, camera);
     window.requestAnimationFrame(tick);
 }

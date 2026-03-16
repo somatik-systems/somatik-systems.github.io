@@ -12,6 +12,57 @@ body {
     overflow-x: hidden;
 }
 
+/* --- NEW: Loading Screen --- */
+#loader-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #0a0a0a;
+    z-index: 9999;
+    /* Highest z-index to cover everything */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.5s ease;
+}
+
+.loader-content {
+    text-align: center;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1.5rem auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+#loading-text {
+    font-size: 1rem;
+    color: #a3a3a3;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* -------------------------- */
+
+
 /* Lenis Recommended CSS for Smooth Scrolling */
 html.lenis {
     height: auto;
@@ -74,7 +125,6 @@ html.lenis {
 }
 
 /* 3D Canvas Background */
-/* FIXED: Locks the canvas to the viewport */
 #webgl-canvas {
     position: fixed;
     top: 0;
