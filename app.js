@@ -52,19 +52,27 @@ scene.add(fillLight);
 // 5. Load the GLB & Identify Door Assembly
 // ==========================================
 let printerModel;
-let printerDoor = null; // NEW: Global reference for the door node
+let printerDoor = null;
 const gltfLoader = new GLTFLoader();
 
 const loaderWrapper = document.getElementById('loader-wrapper');
 const loadingText = document.getElementById('loading-text');
 
 gltfLoader.load(
-    './assets/printer_clear.glb',
+    './assets/printer_black.glb', // UPDATED FILENAME
     (gltf) => {
         printerModel = gltf.scene;
 
-        // NEW: Locate the newly rigged door node
+        // Robust Door Finder (Checks for exact match, then falls back to searching for "door")
         printerDoor = printerModel.getObjectByName('Door Assembly');
+        if (!printerDoor) {
+            printerModel.traverse((child) => {
+                if (child.name.toLowerCase().includes('door')) {
+                    printerDoor = child;
+                    console.log("Door found via fallback:", child.name);
+                }
+            });
+        }
 
         // Fix CAD Orientation
         printerModel.rotation.x = -Math.PI / 2;
@@ -152,7 +160,7 @@ if (exploreInBtn) {
             duration: 1.5, ease: "power2.inOut"
         });
 
-        // NEW: Open the physical printer door
+        // Open the physical printer door
         if (printerDoor) {
             gsap.to(printerDoor.rotation, {
                 z: -1.5,
@@ -186,7 +194,7 @@ if (exploreOutBtn) {
             duration: 1.5, ease: "power2.inOut"
         });
 
-        // NEW: Close the physical printer door
+        // Close the physical printer door
         if (printerDoor) {
             gsap.to(printerDoor.rotation, {
                 z: 0,
@@ -224,7 +232,7 @@ if (logoBtn) {
         gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
 
-        // NEW: Ensure door closes if navigating away via logo
+        // Ensure door closes if navigating away via logo
         if (printerDoor) {
             gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
         }
