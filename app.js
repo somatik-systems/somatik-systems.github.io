@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 // ==========================================
-// 1. Core Three.js Setup & Tone Mapping
+// 1. Core Three.js Setup
 // ==========================================
 const canvas = document.querySelector('#webgl-canvas');
 const scene = new THREE.Scene();
@@ -13,9 +13,10 @@ const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alph
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+// Crucial for photorealistic reflections
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.9;
+renderer.toneMappingExposure = 1.0;
 
 // ==========================================
 // 2. Camera Setup
@@ -25,7 +26,7 @@ camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
-// 3. Orbit Controls (Interactive Spining & Zooming)
+// 3. Orbit Controls
 // ==========================================
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -38,18 +39,27 @@ controls.autoRotateSpeed = 1.0;
 controls.target.set(0, 0, 0);
 
 // ==========================================
-// 4. Lighting Architecture (IBL Setup)
+// 4. Lighting Architecture
 // ==========================================
-const pmremGenerator = new THREE.PMREMGenerator(renderer);
-pmremGenerator.compileEquirectangularShader();
-
-const environment = new RoomEnvironment();
-const envTexture = pmremGenerator.fromScene(environment).texture;
-
-scene.environment = envTexture;
-
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+directionalLight.position.set(5, 5, 5);
+scene.add(directionalLight);
+
+const fillLight = new THREE.DirectionalLight(0xe0eaff, 1);
+fillLight.position.set(-5, 3, -5);
+scene.add(fillLight);
+
+// FIX: Fetch the professional HDRI environment map directly from the cloud
+new RGBELoader()
+    .setCrossOrigin('anonymous')
+    .load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/equirectangular/royal_esplanade_1k.hdr', function (texture) {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        // scene.background = texture; // Uncomment this if you actually want to see the 360 photo!
+        scene.environment = texture; // This tells the metal to reflect the photo
+    });
 
 // ==========================================
 // 5. Load the GLB
@@ -65,7 +75,6 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // Fix CAD Orientation
         printerModel.rotation.x = -Math.PI / 2;
         printerModel.updateMatrixWorld(true);
 
@@ -86,7 +95,6 @@ gltfLoader.load(
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
-        // Base Drop
         modelGroup.position.y = -1.1;
 
         scene.add(modelGroup);
@@ -139,7 +147,6 @@ if (exploreInBtn) {
         controls.enableRotate = false;
         controls.enablePan = true;
 
-        // FIX: Moved the Y axis up to -0.3 and tightened the Z axis to 2.5
         gsap.to(camera.position, { x: 0, y: -0.3, z: 2.5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: -0.3, z: 0, duration: 1.5, ease: "power2.inOut" });
     });
