@@ -32,7 +32,6 @@ controls.enablePan = true;
 controls.enableRotate = true;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 1.0;
-// We aim the camera at (0,0,0), effectively pushing the model (which we move down later) to the bottom of the screen
 controls.target.set(0, 0, 0);
 
 // ==========================================
@@ -63,7 +62,6 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // Fix CAD Orientation
         printerModel.rotation.x = -Math.PI / 2;
         printerModel.updateMatrixWorld(true);
 
@@ -84,8 +82,8 @@ gltfLoader.load(
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
-        // FIX: Drastically dropped the model down to close the gap at the bottom of the screen
-        modelGroup.position.y = -2.2;
+        // FIX: Halved the drop from -2.2 to -1.1
+        modelGroup.position.y = -1.1;
 
         scene.add(modelGroup);
 
@@ -137,14 +135,14 @@ if (exploreInBtn) {
         controls.enableRotate = false;
         controls.enablePan = true;
 
-        // FIX: Dropped the Y target down to match the model's new height, and backed Z out to 3.2 to reduce zoom percentage
+        // FIX: Halved the Y zoom drop from -1.5 to -0.75
         gsap.to(camera.position, {
-            x: 0, y: -1.5, z: 3.2,
+            x: 0, y: -0.75, z: 3.2,
             duration: 1.5, ease: "power2.inOut"
         });
 
         gsap.to(controls.target, {
-            x: 0, y: -1.5, z: 0,
+            x: 0, y: -0.75, z: 0,
             duration: 1.5, ease: "power2.inOut"
         });
     });
@@ -161,7 +159,6 @@ if (exploreOutBtn) {
         controls.enableRotate = true;
         controls.autoRotate = true;
 
-        // Return to the initial baseline coordinates
         gsap.to(camera.position, {
             x: 3, y: 2, z: 5,
             duration: 1.5, ease: "power2.inOut"
@@ -171,6 +168,36 @@ if (exploreOutBtn) {
             x: 0, y: 0, z: 0,
             duration: 1.5, ease: "power2.inOut"
         });
+    });
+}
+
+// --- NEW: Waitlist / CTA Navigation Buttons ---
+const ctaScrollBtn = document.getElementById('cta-scroll-btn');
+const navWaitlistBtn = document.getElementById('nav-waitlist-btn');
+
+function scrollToWaitlist(e) {
+    if (e) e.preventDefault();
+    lenis.start();
+    lenis.scrollTo('#waitlist');
+    setTimeout(() => { lenis.stop(); }, 1500);
+}
+
+if (ctaScrollBtn) ctaScrollBtn.addEventListener('click', scrollToWaitlist);
+if (navWaitlistBtn) navWaitlistBtn.addEventListener('click', scrollToWaitlist);
+
+// --- NEW: Logo Button (Returns to top of page if stuck at bottom) ---
+const logoBtn = document.querySelector('.logo');
+if (logoBtn) {
+    logoBtn.addEventListener('click', () => {
+        lenis.start();
+        lenis.scrollTo(0);
+        setTimeout(() => { lenis.stop(); }, 1500);
+
+        // If they were zoomed in, also zoom them back out seamlessly
+        controls.enableRotate = true;
+        controls.autoRotate = true;
+        gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
     });
 }
 
