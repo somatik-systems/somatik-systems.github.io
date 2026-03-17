@@ -21,7 +21,6 @@ body {
     height: 100vh;
     background: #0a0a0a;
     z-index: 9999;
-    /* Highest z-index to cover everything */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -61,7 +60,6 @@ body {
 }
 
 /* -------------------------- */
-
 
 /* Lenis Recommended CSS for Smooth Scrolling */
 html.lenis {
@@ -157,6 +155,16 @@ html.lenis {
     color: #a3a3a3;
     line-height: 1.5;
     max-width: 80%;
+}
+
+/* FIX: Bottom CTA Placement */
+.hero-bottom-cta {
+    position: absolute;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    pointer-events: auto;
 }
 
 /* Specs Section Upgrade */
@@ -255,20 +263,11 @@ html.lenis {
     color: #000;
     font-weight: 700;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, background 0.2s ease;
 }
 
 .submit-btn:hover {
     transform: scale(1.05);
-}
-
-
-.hero-bottom-cta {
-    position: absolute;
-    bottom: 3rem;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 20;
-    pointer-events: auto;
-    /* Ensures the button is clickable */
+    background: #e0e0e0 !important;
+    color: #000 !important;
 }

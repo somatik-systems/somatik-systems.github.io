@@ -48,25 +48,22 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // Auto-Centering Algorithm
+        // FIX 1: Scale down FIRST
+        printerModel.scale.set(0.01, 0.01, 0.01);
+        printerModel.updateMatrixWorld(true);
+
+        // FIX 2: Compute bounding box on the newly scaled model to center it perfectly
         const box = new THREE.Box3().setFromObject(printerModel);
         const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
 
         printerModel.position.x = -center.x;
         printerModel.position.y = -center.y;
         printerModel.position.z = -center.z;
 
-        const maxDim = Math.max(size.x, size.y, size.z);
-        if (maxDim > 0) {
-            const scaleFactor = 3 / maxDim;
-            printerModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
-        }
-
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
-        // APPLY FIXES: Rotate 90 degrees CCW and drop slightly to ground it
+        // FIX 3: Rotate 90 degrees CCW and drop slightly to ground it
         modelGroup.rotation.y = -Math.PI / 2;
         modelGroup.position.y = -0.5;
 
@@ -78,14 +75,14 @@ gltfLoader.load(
             loaderWrapper.style.display = 'none';
         }, 500);
 
-        // Initialize GSAP animation now that model is loaded
+        // Initialize GSAP animation
         if (typeof gsap !== 'undefined') {
             setupScrollChoreography();
         }
     },
     (xhr) => {
         if (xhr.lengthComputable) {
-            // FIX: Clamp percentage strictly to 100 maximum
+            // FIX 4: Clamp percentage strictly to 100 maximum
             const percentComplete = Math.min(100, (xhr.loaded / xhr.total) * 100);
             loadingText.innerText = `Loading Digital Twin: ${Math.round(percentComplete)}%`;
         } else {
@@ -136,15 +133,14 @@ window.addEventListener('resize', () => {
 });
 
 const lenis = new Lenis({
-    duration: 1.5, // Slightly slower duration for an elegant scroll
+    duration: 1.5,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
 });
 
-// FIX: Attach button click to Lenis smooth scroll
+// FIX 5: Attach button click to Lenis smooth scroll down to the specs page
 const exploreBtn = document.getElementById('explore-inside-btn');
 if (exploreBtn) {
     exploreBtn.addEventListener('click', () => {
-        // Automatically scrolls down, which seamlessly drives the GSAP zoom effect
         lenis.scrollTo('.specs-section');
     });
 }
