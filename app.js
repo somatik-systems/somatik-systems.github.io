@@ -29,6 +29,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.enableZoom = true;
 controls.enablePan = true;
+controls.enableRotate = true; // explicitly defining this to toggle later
 controls.autoRotate = true;
 controls.autoRotateSpeed = 1.0;
 controls.target.set(0, 0, 0);
@@ -48,7 +49,7 @@ fillLight.position.set(-5, 3, -5);
 scene.add(fillLight);
 
 // ==========================================
-// 5. Load the GLB & Setup Progress Tracker
+// 5. Load the GLB
 // ==========================================
 let printerModel;
 const gltfLoader = new GLTFLoader();
@@ -61,13 +62,10 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // --- NEW: Fix CAD Orientation First ---
-        // Rotate -90 degrees on the X-axis so it stands up correctly
+        // Fix CAD Orientation
         printerModel.rotation.x = -Math.PI / 2;
-        // Force Three.js to apply the rotation matrix before calculating the Box
         printerModel.updateMatrixWorld(true);
 
-        // --- Auto-Centering Algorithm ---
         const box = new THREE.Box3().setFromObject(printerModel);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
@@ -120,19 +118,23 @@ const lenis = new Lenis({
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
 });
 
-// Lock page scroll on load
+// Immediately lock user scroll so scroll-wheel is preserved for 3D zoom
 lenis.stop();
 
 // --- Explore Inside Button ---
 const exploreInBtn = document.getElementById('explore-inside-btn');
 if (exploreInBtn) {
     exploreInBtn.addEventListener('click', () => {
+        // Unlock page to transition, then re-lock 1.5 seconds later
         lenis.start();
         lenis.scrollTo('.specs-section');
+        setTimeout(() => { lenis.stop(); }, 1500);
 
+        // Disable rotation, allow panning
         controls.autoRotate = false;
+        controls.enableRotate = false;
+        controls.enablePan = true;
 
-        // Push camera deep inside
         gsap.to(camera.position, {
             x: 0, y: 0.2, z: 1.2,
             duration: 1.5, ease: "power2.inOut"
@@ -149,23 +151,20 @@ if (exploreInBtn) {
 const exploreOutBtn = document.getElementById('explore-outside-btn');
 if (exploreOutBtn) {
     exploreOutBtn.addEventListener('click', () => {
-        // Scroll back to the very top
+        // Unlock page to return top, then re-lock
+        lenis.start();
         lenis.scrollTo(0);
+        setTimeout(() => { lenis.stop(); }, 1500);
 
-        // Resume spinning
+        // Re-enable rotation
+        controls.enableRotate = true;
         controls.autoRotate = true;
 
-        // Tween camera back to its original starting position
         gsap.to(camera.position, {
             x: 3, y: 2, z: 5,
-            duration: 1.5, ease: "power2.inOut",
-            onComplete: () => {
-                // Re-lock the page scroll once we reach the top
-                lenis.stop();
-            }
+            duration: 1.5, ease: "power2.inOut"
         });
 
-        // Reset the look target to the center
         gsap.to(controls.target, {
             x: 0, y: 0, z: 0,
             duration: 1.5, ease: "power2.inOut"
