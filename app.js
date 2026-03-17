@@ -29,7 +29,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.enableZoom = true;
 controls.enablePan = true;
-controls.enableRotate = true; // explicitly defining this to toggle later
+controls.enableRotate = true;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 1.0;
 controls.target.set(0, 0, 0);
@@ -82,6 +82,10 @@ gltfLoader.load(
 
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
+
+        // Lowered the baseline position to drop it further down the screen on load
+        modelGroup.position.y = -0.8;
+
         scene.add(modelGroup);
 
         loaderWrapper.style.opacity = '0';
@@ -118,45 +122,41 @@ const lenis = new Lenis({
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
 });
 
-// Immediately lock user scroll so scroll-wheel is preserved for 3D zoom
 lenis.stop();
 
 // --- Explore Inside Button ---
 const exploreInBtn = document.getElementById('explore-inside-btn');
 if (exploreInBtn) {
     exploreInBtn.addEventListener('click', () => {
-        // Unlock page to transition, then re-lock 1.5 seconds later
         lenis.start();
         lenis.scrollTo('.specs-section');
         setTimeout(() => { lenis.stop(); }, 1500);
 
-        // Disable rotation, allow panning
         controls.autoRotate = false;
         controls.enableRotate = false;
         controls.enablePan = true;
 
+        // Tweaked camera to sit higher (y: 0.6) and stay further back (z: 2.2)
         gsap.to(camera.position, {
-            x: 0, y: 0.2, z: 1.2,
+            x: 0, y: 0.6, z: 2.2,
             duration: 1.5, ease: "power2.inOut"
         });
 
         gsap.to(controls.target, {
-            x: 0, y: 0.2, z: 0,
+            x: 0, y: 0.6, z: 0,
             duration: 1.5, ease: "power2.inOut"
         });
     });
 }
 
-// --- Explore Outside Button ---
+// --- Return Outside Button ---
 const exploreOutBtn = document.getElementById('explore-outside-btn');
 if (exploreOutBtn) {
     exploreOutBtn.addEventListener('click', () => {
-        // Unlock page to return top, then re-lock
         lenis.start();
         lenis.scrollTo(0);
         setTimeout(() => { lenis.stop(); }, 1500);
 
-        // Re-enable rotation
         controls.enableRotate = true;
         controls.autoRotate = true;
 
