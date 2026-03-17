@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-// Updated: Swapped RoomEnvironment for RGBELoader
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 // ==========================================
@@ -16,7 +15,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.9;
+renderer.toneMappingExposure = 1.2; // Bumped exposure slightly to combat the darkness
 
 // ==========================================
 // 2. Camera Setup
@@ -26,7 +25,7 @@ camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
-// 3. Orbit Controls (Interactive Spining & Zooming)
+// 3. Orbit Controls
 // ==========================================
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -39,22 +38,28 @@ controls.autoRotateSpeed = 1.0;
 controls.target.set(0, 0, 0);
 
 // ==========================================
-// 4. Lighting Architecture (Photorealistic HDRI)
+// 4. Lighting Architecture (HDRI + Manual Lights)
 // ==========================================
-const pmremGenerator = new THREE.PMREMGenerator(renderer);
-pmremGenerator.compileEquirectangularShader();
 
-// Updated: Implemented your local HDR file for high-end reflections
+// A. Your original angled "Key Light" and "Fill Light"
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Lowered so it doesn't wash out reflections
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5); // High intensity for that "shining down" look
+directionalLight.position.set(5, 10, 7.5); // Positioned high and to the right
+scene.add(directionalLight);
+
+const fillLight = new THREE.DirectionalLight(0xe0eaff, 1.5);
+fillLight.position.set(-5, 3, -5);
+scene.add(fillLight);
+
+// B. The HDRI Environment for the "Awesome" reflections
 new RGBELoader()
     .setPath('assets/')
     .load('royal_esplanade_1k.hdr', function (texture) {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
-        // scene.background = texture; // Uncomment if you want to see the studio background
     });
-
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
-scene.add(ambientLight);
 
 // ==========================================
 // 5. Load the GLB & Bind Kinematics
@@ -71,26 +76,16 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // FIX: Check for exact match OR underscore match first
+        // Fallback door assembly logic
         printerDoor = printerModel.getObjectByName('Door Assembly') || printerModel.getObjectByName('Door_Assembly');
-
-        // FIX: If exact name fails, safely find the FIRST parent node with "door" in the name and STOP overwriting it.
         if (!printerDoor) {
             printerModel.traverse((child) => {
                 if (!printerDoor && child.name.toLowerCase().includes('door')) {
                     printerDoor = child;
-                    console.log("✅ Door found via fallback:", child.name);
                 }
             });
-        } else {
-            console.log("✅ Exact Door Assembly found:", printerDoor.name);
         }
 
-        if (!printerDoor) {
-            console.error("❌ CRITICAL: Could not find any part of the model with 'Door' in its name.");
-        }
-
-        // Fix CAD Orientation
         printerModel.rotation.x = -Math.PI / 2;
         printerModel.updateMatrixWorld(true);
 
@@ -110,7 +105,6 @@ gltfLoader.load(
 
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
-
         modelGroup.position.y = -1.1;
 
         scene.add(modelGroup);
@@ -124,9 +118,6 @@ gltfLoader.load(
         if (xhr.lengthComputable) {
             const percentComplete = Math.min(100, (xhr.loaded / xhr.total) * 100);
             loadingText.innerText = `Loading Digital Twin: ${Math.round(percentComplete)}%`;
-        } else {
-            const mbsLoaded = (xhr.loaded / (1024 * 1024)).toFixed(1);
-            loadingText.innerText = `Loading Digital Twin: ${mbsLoaded} MB`;
         }
     },
     (error) => {
@@ -136,7 +127,7 @@ gltfLoader.load(
 );
 
 // ==========================================
-// 6. Responsive Resize & Interactions
+// 6. Interactions & Page Navigation
 // ==========================================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -144,11 +135,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-const lenis = new Lenis({
-    duration: 1.5,
-    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
-});
-
+const lenis = new Lenis({ duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
 lenis.stop();
 
 // Explore Inside
@@ -163,13 +150,11 @@ if (exploreInBtn) {
         controls.enableRotate = false;
         controls.enablePan = true;
 
-        gsap.to(camera.position, { x: 0, y: -1, z: 2.5, duration: 1.5, ease: "power2.inOut" });
-        gsap.to(controls.target, { x: 0, y: -1, z: 0, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(camera.position, { x: 0, y: 1, z: 2.5, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(controls.target, { x: 0, y: 1, z: 0, duration: 1.5, ease: "power2.inOut" });
 
         if (printerDoor) {
             gsap.to(printerDoor.rotation, { z: -1.5, duration: 1.5, ease: "power2.inOut" });
-        } else {
-            console.warn("GSAP skipped: printerDoor is null");
         }
     });
 }
@@ -194,34 +179,30 @@ if (exploreOutBtn) {
     });
 }
 
-// Waitlist / CTA Navigation
+// Waitlist / CTA / Logo Navigation
 const ctaScrollBtn = document.getElementById('cta-scroll-btn');
 const navWaitlistBtn = document.getElementById('nav-waitlist-btn');
+const logoBtn = document.querySelector('.logo');
+
 function scrollToWaitlist(e) {
     if (e) e.preventDefault();
     lenis.start();
     lenis.scrollTo('#waitlist');
     setTimeout(() => { lenis.stop(); }, 1500);
 }
+
 if (ctaScrollBtn) ctaScrollBtn.addEventListener('click', scrollToWaitlist);
 if (navWaitlistBtn) navWaitlistBtn.addEventListener('click', scrollToWaitlist);
-
-// Logo Button
-const logoBtn = document.querySelector('.logo');
 if (logoBtn) {
     logoBtn.addEventListener('click', () => {
         lenis.start();
         lenis.scrollTo(0);
         setTimeout(() => { lenis.stop(); }, 1500);
-
         controls.enableRotate = true;
         controls.autoRotate = true;
         gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
-
-        if (printerDoor) {
-            gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
-        }
+        if (printerDoor) gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
     });
 }
 
