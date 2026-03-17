@@ -22,16 +22,18 @@ camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
-// 3. Orbit Controls (Interactive Spining & Zooming)
+// 3. Orbit Controls (Interactive Spining & Panning)
 // ==========================================
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-controls.enableZoom = true;
+
+// FIXED: Disable zoom to prevent scroll-jacking conflict with the webpage
+controls.enableZoom = false;
 controls.enablePan = true;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 1.0;
-controls.target.set(0, 0, 0); // Ensure camera orbits the exact center
+controls.autoRotateSpeed = 1.5;
+controls.target.set(0, 0, 0);
 
 // ==========================================
 // 4. Lighting Architecture
@@ -61,33 +63,31 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // --- NEW: Auto-Centering and Auto-Scaling Algorithm ---
-
-        // 1. Compute the bounding box of the raw CAD model
         const box = new THREE.Box3().setFromObject(printerModel);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
 
-        // 2. Shift the model so its exact geometric center is at (0,0,0)
         printerModel.position.x = -center.x;
         printerModel.position.y = -center.y;
         printerModel.position.z = -center.z;
 
-        // 3. Find the largest dimension (width, height, or depth)
         const maxDim = Math.max(size.x, size.y, size.z);
 
-        // 4. Dynamically scale it so the largest dimension is exactly 3 units wide
         if (maxDim > 0) {
             const scaleFactor = 3 / maxDim;
             printerModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
         }
 
-        // Wrap it in a group to maintain the auto-center pivot
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
-        scene.add(modelGroup);
 
-        // ------------------------------------------------------
+        // FIXED: Rotate 90 degrees counter-clockwise
+        modelGroup.rotation.y = -Math.PI / 2;
+
+        // FIXED: Drop the model down slightly so it doesn't look like it's floating
+        modelGroup.position.y = -0.5;
+
+        scene.add(modelGroup);
 
         loaderWrapper.style.opacity = '0';
         setTimeout(() => {
@@ -96,7 +96,8 @@ gltfLoader.load(
     },
     (xhr) => {
         if (xhr.lengthComputable) {
-            const percentComplete = (xhr.loaded / xhr.total) * 100;
+            // FIXED: Clamp the percentage to a maximum of 100
+            const percentComplete = Math.min(100, (xhr.loaded / xhr.total) * 100);
             loadingText.innerText = `Loading Digital Twin: ${Math.round(percentComplete)}%`;
         } else {
             const mbsLoaded = (xhr.loaded / (1024 * 1024)).toFixed(1);
@@ -110,7 +111,7 @@ gltfLoader.load(
 );
 
 // ==========================================
-// 6. Responsive Resize & Render Loop
+// 6. Responsive Resize & Render Loop & Interactions
 // ==========================================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -122,6 +123,34 @@ const lenis = new Lenis({
     duration: 1.2,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
 });
+
+// --- NEW: Interactive Button Click Event ---
+document.getElementById('explore-btn').addEventListener('click', () => {
+    // 1. Scroll the HTML page down to the specs section smoothly
+    lenis.scrollTo('.specs-section', { duration: 1.5 });
+
+    // 2. Stop the auto-spinning so the user can examine details
+    controls.autoRotate = false;
+
+    // 3. Tween the camera deep inside the printer
+    gsap.to(camera.position, {
+        x: 0,
+        y: 0.2,   // Slightly above center
+        z: 1.2,   // Pushed deep into the 3D model
+        duration: 1.5,
+        ease: "power2.inOut"
+    });
+
+    // 4. Center the OrbitControls target to look straight ahead
+    gsap.to(controls.target, {
+        x: 0,
+        y: 0.2,
+        z: 0,
+        duration: 1.5,
+        ease: "power2.inOut"
+    });
+});
+// -----------------------------------------
 
 function tick(time) {
     lenis.raf(time);
