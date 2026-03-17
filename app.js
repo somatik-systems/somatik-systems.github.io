@@ -52,38 +52,18 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
 scene.add(ambientLight);
 
 // ==========================================
-// 5. Load the GLB & Bind Kinematics
+// 5. Load the GLB
 // ==========================================
 let printerModel;
-let printerDoor = null;
 const gltfLoader = new GLTFLoader();
 
 const loaderWrapper = document.getElementById('loader-wrapper');
 const loadingText = document.getElementById('loading-text');
 
 gltfLoader.load(
-    './assets/printer_black.glb',
+    './assets/printer.glb',
     (gltf) => {
         printerModel = gltf.scene;
-
-        // FIX: Check for exact match OR underscore match first
-        printerDoor = printerModel.getObjectByName('Door Assembly') || printerModel.getObjectByName('Door_Assembly');
-
-        // FIX: If exact name fails, safely find the FIRST parent node with "door" in the name and STOP overwriting it.
-        if (!printerDoor) {
-            printerModel.traverse((child) => {
-                if (!printerDoor && child.name.toLowerCase().includes('door')) {
-                    printerDoor = child;
-                    console.log("✅ Door found via fallback:", child.name);
-                }
-            });
-        } else {
-            console.log("✅ Exact Door Assembly found:", printerDoor.name);
-        }
-
-        if (!printerDoor) {
-            console.error("❌ CRITICAL: Could not find any part of the model with 'Door' in its name.");
-        }
 
         // Fix CAD Orientation
         printerModel.rotation.x = -Math.PI / 2;
@@ -106,6 +86,7 @@ gltfLoader.load(
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
+        // Base Drop
         modelGroup.position.y = -1.1;
 
         scene.add(modelGroup);
@@ -146,7 +127,7 @@ const lenis = new Lenis({
 
 lenis.stop();
 
-// Explore Inside
+// --- Explore Inside Button ---
 const exploreInBtn = document.getElementById('explore-inside-btn');
 if (exploreInBtn) {
     exploreInBtn.addEventListener('click', () => {
@@ -158,18 +139,13 @@ if (exploreInBtn) {
         controls.enableRotate = false;
         controls.enablePan = true;
 
-        gsap.to(camera.position, { x: 0, y: -0.75, z: 3.2, duration: 1.5, ease: "power2.inOut" });
-        gsap.to(controls.target, { x: 0, y: -0.75, z: 0, duration: 1.5, ease: "power2.inOut" });
-
-        if (printerDoor) {
-            gsap.to(printerDoor.rotation, { z: -1.5, duration: 1.5, ease: "power2.inOut" });
-        } else {
-            console.warn("GSAP skipped: printerDoor is null");
-        }
+        // FIX: Moved the Y axis up to -0.3 and tightened the Z axis to 2.5
+        gsap.to(camera.position, { x: 0, y: -0.3, z: 2.5, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(controls.target, { x: 0, y: -0.3, z: 0, duration: 1.5, ease: "power2.inOut" });
     });
 }
 
-// Return Outside
+// --- Return Outside Button ---
 const exploreOutBtn = document.getElementById('explore-outside-btn');
 if (exploreOutBtn) {
     exploreOutBtn.addEventListener('click', () => {
@@ -182,26 +158,24 @@ if (exploreOutBtn) {
 
         gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
-
-        if (printerDoor) {
-            gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
-        }
     });
 }
 
-// Waitlist / CTA Navigation
+// --- Waitlist / CTA Navigation Buttons ---
 const ctaScrollBtn = document.getElementById('cta-scroll-btn');
 const navWaitlistBtn = document.getElementById('nav-waitlist-btn');
+
 function scrollToWaitlist(e) {
     if (e) e.preventDefault();
     lenis.start();
     lenis.scrollTo('#waitlist');
     setTimeout(() => { lenis.stop(); }, 1500);
 }
+
 if (ctaScrollBtn) ctaScrollBtn.addEventListener('click', scrollToWaitlist);
 if (navWaitlistBtn) navWaitlistBtn.addEventListener('click', scrollToWaitlist);
 
-// Logo Button
+// --- Logo Button (Returns to top of page) ---
 const logoBtn = document.querySelector('.logo');
 if (logoBtn) {
     logoBtn.addEventListener('click', () => {
@@ -213,10 +187,6 @@ if (logoBtn) {
         controls.autoRotate = true;
         gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
-
-        if (printerDoor) {
-            gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
-        }
     });
 }
 
