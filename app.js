@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// Updated: Swapped RoomEnvironment for RGBELoader
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
-// NEW: Import RectAreaLight for professional highlights
-import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
 
 // ==========================================
 // 1. Core Three.js Setup & Tone Mapping
@@ -17,7 +16,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0; // Restored to 1.0 for better initial punch
+renderer.toneMappingExposure = 0.9;
 
 // ==========================================
 // 2. Camera Setup
@@ -27,7 +26,7 @@ camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
-// 3. Orbit Controls
+// 3. Orbit Controls (Interactive Spining & Zooming)
 // ==========================================
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -40,29 +39,21 @@ controls.autoRotateSpeed = 1.0;
 controls.target.set(0, 0, 0);
 
 // ==========================================
-// 4. Lighting Architecture (HDRI + RectArea Highlights)
+// 4. Lighting Architecture (Photorealistic HDRI)
 // ==========================================
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
 
+// Updated: Implemented your local HDR file for high-end reflections
 new RGBELoader()
     .setPath('assets/')
     .load('royal_esplanade_1k.hdr', function (texture) {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
+        // scene.background = texture; // Uncomment if you want to see the studio background
     });
 
-// REPLACED Directional Light with Studio Softbox (RectAreaLight)
-// This creates a physical "sheet" of light that creates premium white highlights on metal edges
-const width = 4;
-const height = 10;
-const intensity = 5;
-const rectLight = new THREE.RectAreaLight(0xffffff, intensity, width, height);
-rectLight.position.set(5, 5, 5);
-rectLight.lookAt(0, 0, 0);
-scene.add(rectLight);
-
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // Soft fill
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
 scene.add(ambientLight);
 
 // ==========================================
@@ -80,8 +71,10 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
+        // FIX: Check for exact match OR underscore match first
         printerDoor = printerModel.getObjectByName('Door Assembly') || printerModel.getObjectByName('Door_Assembly');
 
+        // FIX: If exact name fails, safely find the FIRST parent node with "door" in the name and STOP overwriting it.
         if (!printerDoor) {
             printerModel.traverse((child) => {
                 if (!printerDoor && child.name.toLowerCase().includes('door')) {
@@ -89,8 +82,15 @@ gltfLoader.load(
                     console.log("✅ Door found via fallback:", child.name);
                 }
             });
+        } else {
+            console.log("✅ Exact Door Assembly found:", printerDoor.name);
         }
 
+        if (!printerDoor) {
+            console.error("❌ CRITICAL: Could not find any part of the model with 'Door' in its name.");
+        }
+
+        // Fix CAD Orientation
         printerModel.rotation.x = -Math.PI / 2;
         printerModel.updateMatrixWorld(true);
 
@@ -110,6 +110,7 @@ gltfLoader.load(
 
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
+
         modelGroup.position.y = -1.1;
 
         scene.add(modelGroup);
@@ -123,6 +124,9 @@ gltfLoader.load(
         if (xhr.lengthComputable) {
             const percentComplete = Math.min(100, (xhr.loaded / xhr.total) * 100);
             loadingText.innerText = `Loading Digital Twin: ${Math.round(percentComplete)}%`;
+        } else {
+            const mbsLoaded = (xhr.loaded / (1024 * 1024)).toFixed(1);
+            loadingText.innerText = `Loading Digital Twin: ${mbsLoaded} MB`;
         }
     },
     (error) => {
@@ -132,7 +136,7 @@ gltfLoader.load(
 );
 
 // ==========================================
-// 6. Interactions & Page Navigation
+// 6. Responsive Resize & Interactions
 // ==========================================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -140,7 +144,11 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-const lenis = new Lenis({ duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+const lenis = new Lenis({
+    duration: 1.5,
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+});
+
 lenis.stop();
 
 // Explore Inside
@@ -160,6 +168,8 @@ if (exploreInBtn) {
 
         if (printerDoor) {
             gsap.to(printerDoor.rotation, { z: -1.5, duration: 1.5, ease: "power2.inOut" });
+        } else {
+            console.warn("GSAP skipped: printerDoor is null");
         }
     });
 }
@@ -184,11 +194,9 @@ if (exploreOutBtn) {
     });
 }
 
-// Waitlist / Logo logic
+// Waitlist / CTA Navigation
 const ctaScrollBtn = document.getElementById('cta-scroll-btn');
 const navWaitlistBtn = document.getElementById('nav-waitlist-btn');
-const logoBtn = document.querySelector('.logo');
-
 function scrollToWaitlist(e) {
     if (e) e.preventDefault();
     lenis.start();
@@ -197,16 +205,23 @@ function scrollToWaitlist(e) {
 }
 if (ctaScrollBtn) ctaScrollBtn.addEventListener('click', scrollToWaitlist);
 if (navWaitlistBtn) navWaitlistBtn.addEventListener('click', scrollToWaitlist);
+
+// Logo Button
+const logoBtn = document.querySelector('.logo');
 if (logoBtn) {
     logoBtn.addEventListener('click', () => {
         lenis.start();
         lenis.scrollTo(0);
         setTimeout(() => { lenis.stop(); }, 1500);
+
         controls.enableRotate = true;
         controls.autoRotate = true;
         gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
-        if (printerDoor) gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
+
+        if (printerDoor) {
+            gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
+        }
     });
 }
 
