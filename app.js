@@ -49,32 +49,24 @@ fillLight.position.set(-5, 3, -5);
 scene.add(fillLight);
 
 // ==========================================
-// 5. Load the GLB & Identify Door Assembly
+// 5. Load the GLB & Bind Kinematics
 // ==========================================
 let printerModel;
-let printerDoor = null;
+let printerDoor = null; // Container for the physical door
 const gltfLoader = new GLTFLoader();
 
 const loaderWrapper = document.getElementById('loader-wrapper');
 const loadingText = document.getElementById('loading-text');
 
 gltfLoader.load(
-    './assets/printer_black.glb', // UPDATED FILENAME
+    './assets/printer_black.glb',
     (gltf) => {
         printerModel = gltf.scene;
 
-        // Robust Door Finder (Checks for exact match, then falls back to searching for "door")
+        // Search the hierarchy and grab the exact door node
         printerDoor = printerModel.getObjectByName('Door Assembly');
-        if (!printerDoor) {
-            printerModel.traverse((child) => {
-                if (child.name.toLowerCase().includes('door')) {
-                    printerDoor = child;
-                    console.log("Door found via fallback:", child.name);
-                }
-            });
-        }
 
-        // Fix CAD Orientation
+        // Fix CAD Orientation (Z-up to Y-up)
         printerModel.rotation.x = -Math.PI / 2;
         printerModel.updateMatrixWorld(true);
 
@@ -95,7 +87,7 @@ gltfLoader.load(
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
-        // Model baseline drop
+        // Halved framing drop
         modelGroup.position.y = -1.1;
 
         scene.add(modelGroup);
@@ -121,7 +113,7 @@ gltfLoader.load(
 );
 
 // ==========================================
-// 6. Responsive Resize & Button Interactions
+// 6. Responsive Resize & Interactions
 // ==========================================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -148,19 +140,18 @@ if (exploreInBtn) {
         controls.enableRotate = false;
         controls.enablePan = true;
 
-        // Camera Zoom
+        // Halved Camera Zoom
         gsap.to(camera.position, {
             x: 0, y: -0.75, z: 3.2,
             duration: 1.5, ease: "power2.inOut"
         });
 
-        // Target Shift
         gsap.to(controls.target, {
             x: 0, y: -0.75, z: 0,
             duration: 1.5, ease: "power2.inOut"
         });
 
-        // Open the physical printer door
+        // Animate the physical door opening
         if (printerDoor) {
             gsap.to(printerDoor.rotation, {
                 z: -1.5,
@@ -188,13 +179,12 @@ if (exploreOutBtn) {
             duration: 1.5, ease: "power2.inOut"
         });
 
-        // Target Return
         gsap.to(controls.target, {
             x: 0, y: 0, z: 0,
             duration: 1.5, ease: "power2.inOut"
         });
 
-        // Close the physical printer door
+        // Animate the physical door closing
         if (printerDoor) {
             gsap.to(printerDoor.rotation, {
                 z: 0,
