@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+// Updated: Swapped RoomEnvironment for RGBELoader
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 // ==========================================
 // 1. Core Three.js Setup & Tone Mapping
@@ -38,15 +39,19 @@ controls.autoRotateSpeed = 1.0;
 controls.target.set(0, 0, 0);
 
 // ==========================================
-// 4. Lighting Architecture (IBL Setup)
+// 4. Lighting Architecture (Photorealistic HDRI)
 // ==========================================
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
 
-const environment = new RoomEnvironment();
-const envTexture = pmremGenerator.fromScene(environment).texture;
-
-scene.environment = envTexture;
+// Updated: Implemented your local HDR file for high-end reflections
+new RGBELoader()
+    .setPath('assets/')
+    .load('royal_esplanade_1k.hdr', function (texture) {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = texture;
+        // scene.background = texture; // Uncomment if you want to see the studio background
+    });
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
 scene.add(ambientLight);
@@ -158,8 +163,8 @@ if (exploreInBtn) {
         controls.enableRotate = false;
         controls.enablePan = true;
 
-        gsap.to(camera.position, { x: 0, y: -0.3, z: 2.5, duration: 1.5, ease: "power2.inOut" });
-        gsap.to(controls.target, { x: 0, y: -0.3, z: 0, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(camera.position, { x: 0, y: -1, z: 2.5, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(controls.target, { x: 0, y: -1, z: 0, duration: 1.5, ease: "power2.inOut" });
 
         if (printerDoor) {
             gsap.to(printerDoor.rotation, { z: -1.5, duration: 1.5, ease: "power2.inOut" });
