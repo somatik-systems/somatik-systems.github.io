@@ -31,6 +31,7 @@ controls.enableZoom = true;
 controls.enablePan = true;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 1.0;
+controls.target.set(0, 0, 0); // Ensure camera orbits the exact center
 
 // ==========================================
 // 4. Lighting Architecture
@@ -52,40 +53,56 @@ scene.add(fillLight);
 let printerModel;
 const gltfLoader = new GLTFLoader();
 
-// UI elements for loader
 const loaderWrapper = document.getElementById('loader-wrapper');
 const loadingText = document.getElementById('loading-text');
 
 gltfLoader.load(
     './assets/printer.glb',
-    // onSuccess callback
     (gltf) => {
         printerModel = gltf.scene;
-        printerModel.position.set(0, -1, 0);
 
-        // Scale down the CAD model
-        printerModel.scale.set(0.01, 0.01, 0.01);
+        // --- NEW: Auto-Centering and Auto-Scaling Algorithm ---
 
-        scene.add(printerModel);
+        // 1. Compute the bounding box of the raw CAD model
+        const box = new THREE.Box3().setFromObject(printerModel);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
 
-        // Fade out loader
+        // 2. Shift the model so its exact geometric center is at (0,0,0)
+        printerModel.position.x = -center.x;
+        printerModel.position.y = -center.y;
+        printerModel.position.z = -center.z;
+
+        // 3. Find the largest dimension (width, height, or depth)
+        const maxDim = Math.max(size.x, size.y, size.z);
+
+        // 4. Dynamically scale it so the largest dimension is exactly 3 units wide
+        if (maxDim > 0) {
+            const scaleFactor = 3 / maxDim;
+            printerModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        }
+
+        // Wrap it in a group to maintain the auto-center pivot
+        const modelGroup = new THREE.Group();
+        modelGroup.add(printerModel);
+        scene.add(modelGroup);
+
+        // ------------------------------------------------------
+
         loaderWrapper.style.opacity = '0';
         setTimeout(() => {
             loaderWrapper.style.display = 'none';
-        }, 500); // Wait for CSS transition to finish before removing from flow
+        }, 500);
     },
-    // onProgress callback
     (xhr) => {
         if (xhr.lengthComputable) {
             const percentComplete = (xhr.loaded / xhr.total) * 100;
             loadingText.innerText = `Loading Digital Twin: ${Math.round(percentComplete)}%`;
         } else {
-            // Fallback if GitHub Pages strips the Content-Length header
             const mbsLoaded = (xhr.loaded / (1024 * 1024)).toFixed(1);
             loadingText.innerText = `Loading Digital Twin: ${mbsLoaded} MB`;
         }
     },
-    // onError callback
     (error) => {
         console.error("Error loading GLB:", error);
         loadingText.innerText = "Error loading model. Please refresh.";
