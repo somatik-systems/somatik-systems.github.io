@@ -61,7 +61,13 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // --- Auto-Centering and Auto-Scaling Algorithm ---
+        // --- NEW: Fix CAD Orientation First ---
+        // Rotate -90 degrees on the X-axis so it stands up correctly
+        printerModel.rotation.x = -Math.PI / 2;
+        // Force Three.js to apply the rotation matrix before calculating the Box
+        printerModel.updateMatrixWorld(true);
+
+        // --- Auto-Centering Algorithm ---
         const box = new THREE.Box3().setFromObject(printerModel);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
@@ -78,11 +84,6 @@ gltfLoader.load(
 
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
-
-        // Rotate 90 degrees CCW and drop slightly to ground it
-        modelGroup.rotation.y = -Math.PI / 2;
-        modelGroup.position.y = -0.5;
-
         scene.add(modelGroup);
 
         loaderWrapper.style.opacity = '0';
@@ -106,7 +107,7 @@ gltfLoader.load(
 );
 
 // ==========================================
-// 6. Responsive Resize & Button Interaction
+// 6. Responsive Resize & Button Interactions
 // ==========================================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -119,36 +120,55 @@ const lenis = new Lenis({
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
 });
 
-// Lock page scroll on load so mouse wheel only zooms the 3D canvas
+// Lock page scroll on load
 lenis.stop();
 
-const exploreBtn = document.getElementById('explore-inside-btn');
-if (exploreBtn) {
-    exploreBtn.addEventListener('click', () => {
-
-        // 1. Re-enable page scroll and glide down to the specs section
+// --- Explore Inside Button ---
+const exploreInBtn = document.getElementById('explore-inside-btn');
+if (exploreInBtn) {
+    exploreInBtn.addEventListener('click', () => {
         lenis.start();
         lenis.scrollTo('.specs-section');
 
-        // 2. Stop the auto-spinning
         controls.autoRotate = false;
 
-        // 3. Tween the camera deep inside the printer
+        // Push camera deep inside
         gsap.to(camera.position, {
-            x: 0,
-            y: 0.2,
-            z: 1.2,
-            duration: 1.5,
-            ease: "power2.inOut"
+            x: 0, y: 0.2, z: 1.2,
+            duration: 1.5, ease: "power2.inOut"
         });
 
-        // 4. Center the OrbitControls target to look straight ahead
         gsap.to(controls.target, {
-            x: 0,
-            y: 0.2,
-            z: 0,
-            duration: 1.5,
-            ease: "power2.inOut"
+            x: 0, y: 0.2, z: 0,
+            duration: 1.5, ease: "power2.inOut"
+        });
+    });
+}
+
+// --- Explore Outside Button ---
+const exploreOutBtn = document.getElementById('explore-outside-btn');
+if (exploreOutBtn) {
+    exploreOutBtn.addEventListener('click', () => {
+        // Scroll back to the very top
+        lenis.scrollTo(0);
+
+        // Resume spinning
+        controls.autoRotate = true;
+
+        // Tween camera back to its original starting position
+        gsap.to(camera.position, {
+            x: 3, y: 2, z: 5,
+            duration: 1.5, ease: "power2.inOut",
+            onComplete: () => {
+                // Re-lock the page scroll once we reach the top
+                lenis.stop();
+            }
+        });
+
+        // Reset the look target to the center
+        gsap.to(controls.target, {
+            x: 0, y: 0, z: 0,
+            duration: 1.5, ease: "power2.inOut"
         });
     });
 }
