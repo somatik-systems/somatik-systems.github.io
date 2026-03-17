@@ -261,3 +261,14 @@ html.lenis {
 .submit-btn:hover {
     transform: scale(1.05);
 }
+
+
+.hero-bottom-cta {
+    position: absolute;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    pointer-events: auto;
+    /* Ensures the button is clickable */
+}

@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ==========================================
 // 1. Core Three.js Setup
@@ -22,21 +21,7 @@ camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
-// 3. Orbit Controls (Interactive Spining & Panning)
-// ==========================================
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-
-// FIXED: Disable zoom to prevent scroll-jacking conflict with the webpage
-controls.enableZoom = false;
-controls.enablePan = true;
-controls.autoRotate = true;
-controls.autoRotateSpeed = 1.5;
-controls.target.set(0, 0, 0);
-
-// ==========================================
-// 4. Lighting Architecture
+// 3. Lighting Architecture
 // ==========================================
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(ambientLight);
@@ -50,7 +35,7 @@ fillLight.position.set(-5, 3, -5);
 scene.add(fillLight);
 
 // ==========================================
-// 5. Load the GLB & Setup Progress Tracker
+// 4. Load the GLB & Setup Progress Tracker
 // ==========================================
 let printerModel;
 const gltfLoader = new GLTFLoader();
@@ -63,6 +48,7 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
+        // Auto-Centering Algorithm
         const box = new THREE.Box3().setFromObject(printerModel);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
@@ -72,7 +58,6 @@ gltfLoader.load(
         printerModel.position.z = -center.z;
 
         const maxDim = Math.max(size.x, size.y, size.z);
-
         if (maxDim > 0) {
             const scaleFactor = 3 / maxDim;
             printerModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
@@ -81,22 +66,26 @@ gltfLoader.load(
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
-        // FIXED: Rotate 90 degrees counter-clockwise
+        // APPLY FIXES: Rotate 90 degrees CCW and drop slightly to ground it
         modelGroup.rotation.y = -Math.PI / 2;
-
-        // FIXED: Drop the model down slightly so it doesn't look like it's floating
         modelGroup.position.y = -0.5;
 
         scene.add(modelGroup);
 
+        // Hide loader once ready
         loaderWrapper.style.opacity = '0';
         setTimeout(() => {
             loaderWrapper.style.display = 'none';
         }, 500);
+
+        // Initialize GSAP animation now that model is loaded
+        if (typeof gsap !== 'undefined') {
+            setupScrollChoreography();
+        }
     },
     (xhr) => {
         if (xhr.lengthComputable) {
-            // FIXED: Clamp the percentage to a maximum of 100
+            // FIX: Clamp percentage strictly to 100 maximum
             const percentComplete = Math.min(100, (xhr.loaded / xhr.total) * 100);
             loadingText.innerText = `Loading Digital Twin: ${Math.round(percentComplete)}%`;
         } else {
@@ -111,7 +100,34 @@ gltfLoader.load(
 );
 
 // ==========================================
-// 6. Responsive Resize & Render Loop & Interactions
+// 5. GSAP Scroll Choreography
+// ==========================================
+function setupScrollChoreography() {
+    gsap.registerPlugin(ScrollTrigger);
+
+    const tl = gsap.timeline({
+        scrollTrigger: {
+            trigger: ".specs-section",
+            start: "top bottom",
+            end: "top top",
+            scrub: 1,
+        }
+    });
+
+    // Animate camera zooming directly into the model
+    tl.to(camera.position, {
+        x: 0,
+        y: 0,
+        z: 1.5, // Z value pushes deep into the machine
+        ease: "power1.inOut",
+        onUpdate: () => {
+            camera.lookAt(0, 0, 0);
+        }
+    }, 0);
+}
+
+// ==========================================
+// 6. Responsive Resize & Interaction
 // ==========================================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -120,41 +136,26 @@ window.addEventListener('resize', () => {
 });
 
 const lenis = new Lenis({
-    duration: 1.2,
+    duration: 1.5, // Slightly slower duration for an elegant scroll
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
 });
 
-// --- NEW: Interactive Button Click Event ---
-document.getElementById('explore-btn').addEventListener('click', () => {
-    // 1. Scroll the HTML page down to the specs section smoothly
-    lenis.scrollTo('.specs-section', { duration: 1.5 });
-
-    // 2. Stop the auto-spinning so the user can examine details
-    controls.autoRotate = false;
-
-    // 3. Tween the camera deep inside the printer
-    gsap.to(camera.position, {
-        x: 0,
-        y: 0.2,   // Slightly above center
-        z: 1.2,   // Pushed deep into the 3D model
-        duration: 1.5,
-        ease: "power2.inOut"
+// FIX: Attach button click to Lenis smooth scroll
+const exploreBtn = document.getElementById('explore-inside-btn');
+if (exploreBtn) {
+    exploreBtn.addEventListener('click', () => {
+        // Automatically scrolls down, which seamlessly drives the GSAP zoom effect
+        lenis.scrollTo('.specs-section');
     });
-
-    // 4. Center the OrbitControls target to look straight ahead
-    gsap.to(controls.target, {
-        x: 0,
-        y: 0.2,
-        z: 0,
-        duration: 1.5,
-        ease: "power2.inOut"
-    });
-});
-// -----------------------------------------
+}
 
 function tick(time) {
     lenis.raf(time);
-    controls.update();
+
+    if (!gsap.isTweening(camera.position)) {
+        camera.lookAt(0, 0, 0);
+    }
+
     renderer.render(scene, camera);
     window.requestAnimationFrame(tick);
 }
