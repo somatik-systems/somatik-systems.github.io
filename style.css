@@ -12,7 +12,7 @@ body {
     overflow-x: hidden;
 }
 
-/* --- NEW: Loading Screen --- */
+/* --- Loading Screen --- */
 #loader-wrapper {
     position: fixed;
     top: 0;
@@ -59,8 +59,6 @@ body {
     text-transform: uppercase;
 }
 
-/* -------------------------- */
-
 /* Lenis Recommended CSS for Smooth Scrolling */
 html.lenis {
     height: auto;
@@ -74,6 +72,7 @@ html.lenis {
     overscroll-behavior: contain;
 }
 
+/* This securely locks the page when lenis.stop() is called */
 .lenis.lenis-stopped {
     overflow: hidden;
 }
@@ -157,7 +156,7 @@ html.lenis {
     max-width: 80%;
 }
 
-/* FIX: Bottom CTA Placement */
+/* Bottom CTA Placement */
 .hero-bottom-cta {
     position: absolute;
     bottom: 3rem;
