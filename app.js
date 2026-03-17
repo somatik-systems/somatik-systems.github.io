@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// NEW: Import the RoomEnvironment helper for instant professional lighting architecture
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 // ==========================================
-// 1. Core Three.js Setup
+// 1. Core Three.js Setup & Tone Mapping
 // ==========================================
 const canvas = document.querySelector('#webgl-canvas');
 const scene = new THREE.Scene();
@@ -11,8 +13,11 @@ const scene = new THREE.Scene();
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+
+// NEW: Advanced Color Management Configuration
+renderer.outputColorSpace = THREE.SRGBColorSpace; // Ensures physically accurate colors
+renderer.toneMapping = THREE.ACESFilmicToneMapping; // Mimics high-end film contrast
+renderer.toneMappingExposure = 0.9; // Adjusted down slightly to maximize reflections on black surfaces
 
 // ==========================================
 // 2. Camera Setup
@@ -22,7 +27,7 @@ camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
-// 3. Orbit Controls (Interactive Spining & Zooming)
+// 3. Orbit Controls (Spining & Zooming)
 // ==========================================
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -35,24 +40,33 @@ controls.autoRotateSpeed = 1.0;
 controls.target.set(0, 0, 0);
 
 // ==========================================
-// 4. Lighting Architecture
+// 4. Lighting Architecture (NEW IBL Setup)
 // ==========================================
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+
+// NEW: Environment Generator
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+pmremGenerator.compileEquirectangularShader();
+
+// NEW: Use the built-in RoomEnvironment (No assets needed!)
+// This generates a virtual "studio room" environment to provide complex reflections and light structure
+const environment = new RoomEnvironment();
+const envTexture = pmremGenerator.fromScene(environment).texture;
+
+// Apply the environment map as the main light and reflection source for the entire scene
+scene.environment = envTexture;
+
+// Optional: Set the background to match (though currently our canvas is transparent/alpha: true)
+// scene.background = envTexture; 
+
+// A tiny, soft ambient light is all that's needed to fill shadows—redundant directional lights REMOVED
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
 scene.add(ambientLight);
-
-const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-directionalLight.position.set(5, 5, 5);
-scene.add(directionalLight);
-
-const fillLight = new THREE.DirectionalLight(0xe0eaff, 1);
-fillLight.position.set(-5, 3, -5);
-scene.add(fillLight);
 
 // ==========================================
 // 5. Load the GLB & Bind Kinematics
 // ==========================================
 let printerModel;
-let printerDoor = null; // Container for the physical door
+let printerDoor = null;
 const gltfLoader = new GLTFLoader();
 
 const loaderWrapper = document.getElementById('loader-wrapper');
@@ -63,10 +77,8 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // Search the hierarchy and grab the exact door node
         printerDoor = printerModel.getObjectByName('Door Assembly');
 
-        // Fix CAD Orientation (Z-up to Y-up)
         printerModel.rotation.x = -Math.PI / 2;
         printerModel.updateMatrixWorld(true);
 
@@ -87,7 +99,6 @@ gltfLoader.load(
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
-        // Halved framing drop
         modelGroup.position.y = -1.1;
 
         scene.add(modelGroup);
@@ -128,101 +139,64 @@ const lenis = new Lenis({
 
 lenis.stop();
 
-// --- Explore Inside Button ---
+// Explore Inside
 const exploreInBtn = document.getElementById('explore-inside-btn');
 if (exploreInBtn) {
     exploreInBtn.addEventListener('click', () => {
         lenis.start();
         lenis.scrollTo('.specs-section');
         setTimeout(() => { lenis.stop(); }, 1500);
-
         controls.autoRotate = false;
         controls.enableRotate = false;
         controls.enablePan = true;
-
-        // Halved Camera Zoom
-        gsap.to(camera.position, {
-            x: 0, y: -0.75, z: 3.2,
-            duration: 1.5, ease: "power2.inOut"
-        });
-
-        gsap.to(controls.target, {
-            x: 0, y: -0.75, z: 0,
-            duration: 1.5, ease: "power2.inOut"
-        });
-
-        // Animate the physical door opening
+        gsap.to(camera.position, { x: 0, y: -0.75, z: 3.2, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(controls.target, { x: 0, y: -0.75, z: 0, duration: 1.5, ease: "power2.inOut" });
         if (printerDoor) {
-            gsap.to(printerDoor.rotation, {
-                z: -1.5,
-                duration: 1.5,
-                ease: "power2.inOut"
-            });
+            gsap.to(printerDoor.rotation, { z: -1.5, duration: 1.5, ease: "power2.inOut" });
         }
     });
 }
 
-// --- Return Outside Button ---
+// Return Outside
 const exploreOutBtn = document.getElementById('explore-outside-btn');
 if (exploreOutBtn) {
     exploreOutBtn.addEventListener('click', () => {
         lenis.start();
         lenis.scrollTo(0);
         setTimeout(() => { lenis.stop(); }, 1500);
-
         controls.enableRotate = true;
         controls.autoRotate = true;
-
-        // Camera Return
-        gsap.to(camera.position, {
-            x: 3, y: 2, z: 5,
-            duration: 1.5, ease: "power2.inOut"
-        });
-
-        gsap.to(controls.target, {
-            x: 0, y: 0, z: 0,
-            duration: 1.5, ease: "power2.inOut"
-        });
-
-        // Animate the physical door closing
+        gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
         if (printerDoor) {
-            gsap.to(printerDoor.rotation, {
-                z: 0,
-                duration: 1.5,
-                ease: "power2.inOut"
-            });
+            gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
         }
     });
 }
 
-// --- Waitlist / CTA Navigation Buttons ---
+// Waitlist / CTA Navigation
 const ctaScrollBtn = document.getElementById('cta-scroll-btn');
 const navWaitlistBtn = document.getElementById('nav-waitlist-btn');
-
 function scrollToWaitlist(e) {
     if (e) e.preventDefault();
     lenis.start();
     lenis.scrollTo('#waitlist');
     setTimeout(() => { lenis.stop(); }, 1500);
 }
-
 if (ctaScrollBtn) ctaScrollBtn.addEventListener('click', scrollToWaitlist);
 if (navWaitlistBtn) navWaitlistBtn.addEventListener('click', scrollToWaitlist);
 
-// --- Logo Button (Returns to top of page) ---
+// Logo Button (Returns to top of page)
 const logoBtn = document.querySelector('.logo');
 if (logoBtn) {
     logoBtn.addEventListener('click', () => {
         lenis.start();
         lenis.scrollTo(0);
         setTimeout(() => { lenis.stop(); }, 1500);
-
         controls.enableRotate = true;
         controls.autoRotate = true;
         gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
-
-        // Ensure door closes if navigating away via logo
         if (printerDoor) {
             gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
         }
