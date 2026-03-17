@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+// NEW: Import RectAreaLight for professional highlights
+import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
 
 // ==========================================
 // 1. Core Three.js Setup & Tone Mapping
@@ -15,7 +17,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2; // Bumped exposure slightly to combat the darkness
+renderer.toneMappingExposure = 1.0; // Restored to 1.0 for better initial punch
 
 // ==========================================
 // 2. Camera Setup
@@ -38,28 +40,30 @@ controls.autoRotateSpeed = 1.0;
 controls.target.set(0, 0, 0);
 
 // ==========================================
-// 4. Lighting Architecture (HDRI + Manual Lights)
+// 4. Lighting Architecture (HDRI + RectArea Highlights)
 // ==========================================
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+pmremGenerator.compileEquirectangularShader();
 
-// A. Your original angled "Key Light" and "Fill Light"
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Lowered so it doesn't wash out reflections
-scene.add(ambientLight);
-
-const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5); // High intensity for that "shining down" look
-directionalLight.position.set(5, 10, 7.5); // Positioned high and to the right
-scene.add(directionalLight);
-
-const fillLight = new THREE.DirectionalLight(0xe0eaff, 1.5);
-fillLight.position.set(-5, 3, -5);
-scene.add(fillLight);
-
-// B. The HDRI Environment for the "Awesome" reflections
 new RGBELoader()
     .setPath('assets/')
     .load('royal_esplanade_1k.hdr', function (texture) {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = texture;
     });
+
+// REPLACED Directional Light with Studio Softbox (RectAreaLight)
+// This creates a physical "sheet" of light that creates premium white highlights on metal edges
+const width = 4;
+const height = 10;
+const intensity = 5;
+const rectLight = new THREE.RectAreaLight(0xffffff, intensity, width, height);
+rectLight.position.set(5, 5, 5);
+rectLight.lookAt(0, 0, 0);
+scene.add(rectLight);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // Soft fill
+scene.add(ambientLight);
 
 // ==========================================
 // 5. Load the GLB & Bind Kinematics
@@ -76,12 +80,13 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // Fallback door assembly logic
         printerDoor = printerModel.getObjectByName('Door Assembly') || printerModel.getObjectByName('Door_Assembly');
+
         if (!printerDoor) {
             printerModel.traverse((child) => {
                 if (!printerDoor && child.name.toLowerCase().includes('door')) {
                     printerDoor = child;
+                    console.log("✅ Door found via fallback:", child.name);
                 }
             });
         }
@@ -150,8 +155,8 @@ if (exploreInBtn) {
         controls.enableRotate = false;
         controls.enablePan = true;
 
-        gsap.to(camera.position, { x: 0, y: 1, z: 2.5, duration: 1.5, ease: "power2.inOut" });
-        gsap.to(controls.target, { x: 0, y: 1, z: 0, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(camera.position, { x: 0, y: -0.7, z: 2.5, duration: 1.5, ease: "power2.inOut" });
+        gsap.to(controls.target, { x: 0, y: -0.7, z: 0, duration: 1.5, ease: "power2.inOut" });
 
         if (printerDoor) {
             gsap.to(printerDoor.rotation, { z: -1.5, duration: 1.5, ease: "power2.inOut" });
@@ -179,7 +184,7 @@ if (exploreOutBtn) {
     });
 }
 
-// Waitlist / CTA / Logo Navigation
+// Waitlist / Logo logic
 const ctaScrollBtn = document.getElementById('cta-scroll-btn');
 const navWaitlistBtn = document.getElementById('nav-waitlist-btn');
 const logoBtn = document.querySelector('.logo');
@@ -190,7 +195,6 @@ function scrollToWaitlist(e) {
     lenis.scrollTo('#waitlist');
     setTimeout(() => { lenis.stop(); }, 1500);
 }
-
 if (ctaScrollBtn) ctaScrollBtn.addEventListener('click', scrollToWaitlist);
 if (navWaitlistBtn) navWaitlistBtn.addEventListener('click', scrollToWaitlist);
 if (logoBtn) {
