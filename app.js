@@ -49,19 +49,24 @@ fillLight.position.set(-5, 3, -5);
 scene.add(fillLight);
 
 // ==========================================
-// 5. Load the GLB
+// 5. Load the GLB & Identify Door Assembly
 // ==========================================
 let printerModel;
+let printerDoor = null; // NEW: Global reference for the door node
 const gltfLoader = new GLTFLoader();
 
 const loaderWrapper = document.getElementById('loader-wrapper');
 const loadingText = document.getElementById('loading-text');
 
 gltfLoader.load(
-    './assets/printer.glb',
+    './assets/printer_clear.glb',
     (gltf) => {
         printerModel = gltf.scene;
 
+        // NEW: Locate the newly rigged door node
+        printerDoor = printerModel.getObjectByName('Door Assembly');
+
+        // Fix CAD Orientation
         printerModel.rotation.x = -Math.PI / 2;
         printerModel.updateMatrixWorld(true);
 
@@ -82,7 +87,7 @@ gltfLoader.load(
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
-        // FIX: Halved the drop from -2.2 to -1.1
+        // Model baseline drop
         modelGroup.position.y = -1.1;
 
         scene.add(modelGroup);
@@ -135,16 +140,26 @@ if (exploreInBtn) {
         controls.enableRotate = false;
         controls.enablePan = true;
 
-        // FIX: Halved the Y zoom drop from -1.5 to -0.75
+        // Camera Zoom
         gsap.to(camera.position, {
             x: 0, y: -0.75, z: 3.2,
             duration: 1.5, ease: "power2.inOut"
         });
 
+        // Target Shift
         gsap.to(controls.target, {
             x: 0, y: -0.75, z: 0,
             duration: 1.5, ease: "power2.inOut"
         });
+
+        // NEW: Open the physical printer door
+        if (printerDoor) {
+            gsap.to(printerDoor.rotation, {
+                z: -1.5,
+                duration: 1.5,
+                ease: "power2.inOut"
+            });
+        }
     });
 }
 
@@ -159,19 +174,30 @@ if (exploreOutBtn) {
         controls.enableRotate = true;
         controls.autoRotate = true;
 
+        // Camera Return
         gsap.to(camera.position, {
             x: 3, y: 2, z: 5,
             duration: 1.5, ease: "power2.inOut"
         });
 
+        // Target Return
         gsap.to(controls.target, {
             x: 0, y: 0, z: 0,
             duration: 1.5, ease: "power2.inOut"
         });
+
+        // NEW: Close the physical printer door
+        if (printerDoor) {
+            gsap.to(printerDoor.rotation, {
+                z: 0,
+                duration: 1.5,
+                ease: "power2.inOut"
+            });
+        }
     });
 }
 
-// --- NEW: Waitlist / CTA Navigation Buttons ---
+// --- Waitlist / CTA Navigation Buttons ---
 const ctaScrollBtn = document.getElementById('cta-scroll-btn');
 const navWaitlistBtn = document.getElementById('nav-waitlist-btn');
 
@@ -185,7 +211,7 @@ function scrollToWaitlist(e) {
 if (ctaScrollBtn) ctaScrollBtn.addEventListener('click', scrollToWaitlist);
 if (navWaitlistBtn) navWaitlistBtn.addEventListener('click', scrollToWaitlist);
 
-// --- NEW: Logo Button (Returns to top of page if stuck at bottom) ---
+// --- Logo Button (Returns to top of page) ---
 const logoBtn = document.querySelector('.logo');
 if (logoBtn) {
     logoBtn.addEventListener('click', () => {
@@ -193,11 +219,15 @@ if (logoBtn) {
         lenis.scrollTo(0);
         setTimeout(() => { lenis.stop(); }, 1500);
 
-        // If they were zoomed in, also zoom them back out seamlessly
         controls.enableRotate = true;
         controls.autoRotate = true;
         gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
+
+        // NEW: Ensure door closes if navigating away via logo
+        if (printerDoor) {
+            gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
+        }
     });
 }
 
