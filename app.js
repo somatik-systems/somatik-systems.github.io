@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 // ==========================================
-// 1. Core Three.js Setup
+// 1. Core Three.js Setup & Tone Mapping
 // ==========================================
 const canvas = document.querySelector('#webgl-canvas');
 const scene = new THREE.Scene();
@@ -13,10 +13,9 @@ const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alph
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-// Crucial for photorealistic reflections
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 0.9;
 
 // ==========================================
 // 2. Camera Setup
@@ -26,7 +25,7 @@ camera.position.set(3, 2, 5);
 scene.add(camera);
 
 // ==========================================
-// 3. Orbit Controls
+// 3. Orbit Controls (Interactive Spining & Zooming)
 // ==========================================
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -39,42 +38,54 @@ controls.autoRotateSpeed = 1.0;
 controls.target.set(0, 0, 0);
 
 // ==========================================
-// 4. Lighting Architecture
+// 4. Lighting Architecture (IBL Setup)
 // ==========================================
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+pmremGenerator.compileEquirectangularShader();
+
+const environment = new RoomEnvironment();
+const envTexture = pmremGenerator.fromScene(environment).texture;
+
+scene.environment = envTexture;
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-directionalLight.position.set(5, 5, 5);
-scene.add(directionalLight);
-
-const fillLight = new THREE.DirectionalLight(0xe0eaff, 1);
-fillLight.position.set(-5, 3, -5);
-scene.add(fillLight);
-
-// FIX: Fetch the professional HDRI environment map directly from the cloud
-new RGBELoader()
-    .setCrossOrigin('anonymous')
-    .load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/equirectangular/royal_esplanade_1k.hdr', function (texture) {
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        // scene.background = texture; // Uncomment this if you actually want to see the 360 photo!
-        scene.environment = texture; // This tells the metal to reflect the photo
-    });
-
 // ==========================================
-// 5. Load the GLB
+// 5. Load the GLB & Bind Kinematics
 // ==========================================
 let printerModel;
+let printerDoor = null;
 const gltfLoader = new GLTFLoader();
 
 const loaderWrapper = document.getElementById('loader-wrapper');
 const loadingText = document.getElementById('loading-text');
 
 gltfLoader.load(
-    './assets/printer.glb',
+    './assets/printer_black.glb',
     (gltf) => {
         printerModel = gltf.scene;
 
+        // FIX: Check for exact match OR underscore match first
+        printerDoor = printerModel.getObjectByName('Door Assembly') || printerModel.getObjectByName('Door_Assembly');
+
+        // FIX: If exact name fails, safely find the FIRST parent node with "door" in the name and STOP overwriting it.
+        if (!printerDoor) {
+            printerModel.traverse((child) => {
+                if (!printerDoor && child.name.toLowerCase().includes('door')) {
+                    printerDoor = child;
+                    console.log("✅ Door found via fallback:", child.name);
+                }
+            });
+        } else {
+            console.log("✅ Exact Door Assembly found:", printerDoor.name);
+        }
+
+        if (!printerDoor) {
+            console.error("❌ CRITICAL: Could not find any part of the model with 'Door' in its name.");
+        }
+
+        // Fix CAD Orientation
         printerModel.rotation.x = -Math.PI / 2;
         printerModel.updateMatrixWorld(true);
 
@@ -135,7 +146,7 @@ const lenis = new Lenis({
 
 lenis.stop();
 
-// --- Explore Inside Button ---
+// Explore Inside
 const exploreInBtn = document.getElementById('explore-inside-btn');
 if (exploreInBtn) {
     exploreInBtn.addEventListener('click', () => {
@@ -149,10 +160,16 @@ if (exploreInBtn) {
 
         gsap.to(camera.position, { x: 0, y: -0.3, z: 2.5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: -0.3, z: 0, duration: 1.5, ease: "power2.inOut" });
+
+        if (printerDoor) {
+            gsap.to(printerDoor.rotation, { z: -1.5, duration: 1.5, ease: "power2.inOut" });
+        } else {
+            console.warn("GSAP skipped: printerDoor is null");
+        }
     });
 }
 
-// --- Return Outside Button ---
+// Return Outside
 const exploreOutBtn = document.getElementById('explore-outside-btn');
 if (exploreOutBtn) {
     exploreOutBtn.addEventListener('click', () => {
@@ -165,24 +182,26 @@ if (exploreOutBtn) {
 
         gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
+
+        if (printerDoor) {
+            gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
+        }
     });
 }
 
-// --- Waitlist / CTA Navigation Buttons ---
+// Waitlist / CTA Navigation
 const ctaScrollBtn = document.getElementById('cta-scroll-btn');
 const navWaitlistBtn = document.getElementById('nav-waitlist-btn');
-
 function scrollToWaitlist(e) {
     if (e) e.preventDefault();
     lenis.start();
     lenis.scrollTo('#waitlist');
     setTimeout(() => { lenis.stop(); }, 1500);
 }
-
 if (ctaScrollBtn) ctaScrollBtn.addEventListener('click', scrollToWaitlist);
 if (navWaitlistBtn) navWaitlistBtn.addEventListener('click', scrollToWaitlist);
 
-// --- Logo Button (Returns to top of page) ---
+// Logo Button
 const logoBtn = document.querySelector('.logo');
 if (logoBtn) {
     logoBtn.addEventListener('click', () => {
@@ -194,6 +213,10 @@ if (logoBtn) {
         controls.autoRotate = true;
         gsap.to(camera.position, { x: 3, y: 2, z: 5, duration: 1.5, ease: "power2.inOut" });
         gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.5, ease: "power2.inOut" });
+
+        if (printerDoor) {
+            gsap.to(printerDoor.rotation, { z: 0, duration: 1.5, ease: "power2.inOut" });
+        }
     });
 }
 
