@@ -72,7 +72,6 @@ html.lenis {
     overscroll-behavior: contain;
 }
 
-/* This securely locks the page when lenis.stop() is called */
 .lenis.lenis-stopped {
     overflow: hidden;
 }

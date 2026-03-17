@@ -27,7 +27,7 @@ scene.add(camera);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-controls.enableZoom = true; // RE-ENABLED: User can zoom the model
+controls.enableZoom = true;
 controls.enablePan = true;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 1.0;
@@ -48,7 +48,7 @@ fillLight.position.set(-5, 3, -5);
 scene.add(fillLight);
 
 // ==========================================
-// 5. Load the GLB (Reverted to functional Box3 logic)
+// 5. Load the GLB & Setup Progress Tracker
 // ==========================================
 let printerModel;
 const gltfLoader = new GLTFLoader();
@@ -61,7 +61,7 @@ gltfLoader.load(
     (gltf) => {
         printerModel = gltf.scene;
 
-        // Calculate bounding box on the raw CAD model to ensure perfect centering
+        // --- Auto-Centering and Auto-Scaling Algorithm ---
         const box = new THREE.Box3().setFromObject(printerModel);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
@@ -70,7 +70,6 @@ gltfLoader.load(
         printerModel.position.y = -center.y;
         printerModel.position.z = -center.z;
 
-        // Scale it dynamically based on its raw dimensions
         const maxDim = Math.max(size.x, size.y, size.z);
         if (maxDim > 0) {
             const scaleFactor = 3 / maxDim;
@@ -80,7 +79,7 @@ gltfLoader.load(
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
-        // FIX: Rotate 90 degrees CCW and drop slightly to ground it
+        // Rotate 90 degrees CCW and drop slightly to ground it
         modelGroup.rotation.y = -Math.PI / 2;
         modelGroup.position.y = -0.5;
 
@@ -93,7 +92,6 @@ gltfLoader.load(
     },
     (xhr) => {
         if (xhr.lengthComputable) {
-            // FIX: Clamp percentage strictly to 100
             const percentComplete = Math.min(100, (xhr.loaded / xhr.total) * 100);
             loadingText.innerText = `Loading Digital Twin: ${Math.round(percentComplete)}%`;
         } else {
@@ -121,7 +119,7 @@ const lenis = new Lenis({
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
 });
 
-// FIX: Lock the page scroll immediately so mouse wheel only zooms the 3D model
+// Lock page scroll on load so mouse wheel only zooms the 3D canvas
 lenis.stop();
 
 const exploreBtn = document.getElementById('explore-inside-btn');
@@ -139,7 +137,7 @@ if (exploreBtn) {
         gsap.to(camera.position, {
             x: 0,
             y: 0.2,
-            z: 1.2,   // Pushed deep into the 3D model
+            z: 1.2,
             duration: 1.5,
             ease: "power2.inOut"
         });
@@ -157,7 +155,7 @@ if (exploreBtn) {
 
 function tick(time) {
     lenis.raf(time);
-    controls.update(); // Keeps Damping and AutoRotate active
+    controls.update();
     renderer.render(scene, camera);
     window.requestAnimationFrame(tick);
 }
