@@ -32,6 +32,7 @@ controls.enablePan = true;
 controls.enableRotate = true;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 1.0;
+// We aim the camera at (0,0,0), effectively pushing the model (which we move down later) to the bottom of the screen
 controls.target.set(0, 0, 0);
 
 // ==========================================
@@ -83,8 +84,8 @@ gltfLoader.load(
         const modelGroup = new THREE.Group();
         modelGroup.add(printerModel);
 
-        // Lowered the baseline position to drop it further down the screen on load
-        modelGroup.position.y = -0.8;
+        // FIX: Drastically dropped the model down to close the gap at the bottom of the screen
+        modelGroup.position.y = -2.2;
 
         scene.add(modelGroup);
 
@@ -136,14 +137,14 @@ if (exploreInBtn) {
         controls.enableRotate = false;
         controls.enablePan = true;
 
-        // Tweaked camera to sit higher (y: 0.6) and stay further back (z: 2.2)
+        // FIX: Dropped the Y target down to match the model's new height, and backed Z out to 3.2 to reduce zoom percentage
         gsap.to(camera.position, {
-            x: 0, y: 0.6, z: 2.2,
+            x: 0, y: -1.5, z: 3.2,
             duration: 1.5, ease: "power2.inOut"
         });
 
         gsap.to(controls.target, {
-            x: 0, y: 0.6, z: 0,
+            x: 0, y: -1.5, z: 0,
             duration: 1.5, ease: "power2.inOut"
         });
     });
@@ -160,6 +161,7 @@ if (exploreOutBtn) {
         controls.enableRotate = true;
         controls.autoRotate = true;
 
+        // Return to the initial baseline coordinates
         gsap.to(camera.position, {
             x: 3, y: 2, z: 5,
             duration: 1.5, ease: "power2.inOut"
